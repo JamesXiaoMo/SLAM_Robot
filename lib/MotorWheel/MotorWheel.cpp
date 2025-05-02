@@ -135,9 +135,14 @@ unsigned int Motor::setSpeedRPM(int speedRPM,bool dir) {
 // direction sensitive 201208	
 int Motor::getSpeedRPM() const {
 	debug();
+	unsigned long now = micros();
+	if (now - isr->pulseEndMicros > 100000)
+		return 0;
+
 	if(getCurrDir()==DIR_ADVANCE)
 		return SPEEDPPS2SPEEDRPM(isr->speedPPS);
-	return -SPEEDPPS2SPEEDRPM(isr->speedPPS);
+	else
+		return -SPEEDPPS2SPEEDRPM(isr->speedPPS);
 }
 int Motor::setSpeedRPM(int speedRPM) {
 	debug();

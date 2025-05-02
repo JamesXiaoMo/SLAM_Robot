@@ -61,7 +61,7 @@ void loop() {
     if (command == 's') {
       speedConvertor(0, 0, 0);
     }else if (command == 'w') {
-      speedConvertor(0, 0.3, 0);
+      speedConvertor(0, 0, 1);
     }
   }
 }
