@@ -5,13 +5,6 @@
 #include <PinChangeInt.h>
 #include <PinChangeIntConfig.h> 
 
-#include <rcl/rcl.h>
-#include <rclc/rclc.h>
-#include <rclc/executor.h>
-#include <geometry_msgs/msg/twist.h>
-#include <nav_msgs/msg/odometry.h>
-#include <std_msgs/msg/header.h>
-
 const float robot_R = 0.125;
 const float wheel_R = 0.05;
 const float sin60 = 0.866025;
@@ -57,22 +50,25 @@ void updateOdometry() {
 }
 
 void speedConvertor(float Vx, float Vy, float Vangle){
+  Serial.println("--- Speed Convertor ---");
+  Serial.print("Vx     = "); Serial.println(Vx, 4);
+  Serial.print("Vy     = "); Serial.println(Vy, 4);
+  Serial.print("Vangle = "); Serial.println(Vangle, 4);
+  Serial.println("------------------------");
   float V1 = Vx + robot_R * Vangle;
   float V2 = -Vx/2 + Vy * sin60 + robot_R * Vangle;
   float V3 = -Vx/2 + -Vy * sin60 + robot_R * Vangle;
-  Serial.print(" V1: ");
-  Serial.println(String(V1));
-  Serial.print(" V2: ");
-  Serial.println(String(V2));
-  Serial.print(" V3: ");
-  Serial.println(String(V3));
+  Serial.print("Vx     = "); Serial.println(V1, 4);
+  Serial.print("Vy     = "); Serial.println(V2, 4);
+  Serial.print("Vangle = "); Serial.println(V3, 4);
+  Serial.println("------------------------");
   wheel1.setGearedSpeedRPM((V1 * 60)/(PI * 0.1));
   wheel2.setGearedSpeedRPM((V2 * 60)/(PI * 0.1));
   wheel3.setGearedSpeedRPM((V3 * 60)/(PI * 0.1));
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   TCCR1B=TCCR1B&0xf8|0x01; // Timer1.Pin9,Pin10 PWM 31250Hz
   TCCR2B=TCCR2B&0xf8|0x01; // Timer2 .Pin3,Pin11 PWM 31250Hz
   wheel1.PIDEnable(0.26,0.02,0,10);
@@ -81,11 +77,11 @@ void setup() {
   //speedConvertor(0,0,-1);
 }
 
-void loop() {
-  updateOdometry();
-  wheel1.PIDRegulate();
-  wheel2.PIDRegulate();
-  wheel3.PIDRegulate();
+// void loop() {
+//   updateOdometry();
+//   wheel1.PIDRegulate();
+//   wheel2.PIDRegulate();
+//   wheel3.PIDRegulate();
   // Serial.print("Wheel1 Speed: ");
   // Serial.print(wheel1.getSpeedMMPS());
   // Serial.print("  Wheel2 Speed: ");
@@ -106,4 +102,36 @@ void loop() {
   //     speedConvertor(0, 0, 1);
   //   }
   // }
+// }
+
+void loop() {
+  if (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    if (cmd.startsWith("V ")) {
+      int firstSpace = cmd.indexOf(' ');
+      int secondSpace = cmd.indexOf(' ', firstSpace + 1);
+      int thirdSpace = cmd.indexOf(' ', secondSpace + 1);
+
+      float v_x = cmd.substring(firstSpace + 1, secondSpace).toFloat();
+      float v_y = cmd.substring(secondSpace + 1, thirdSpace).toFloat();
+      float omega = cmd.substring(thirdSpace + 1).toFloat();
+
+      Serial.println("Parsed via substring:");
+      Serial.println("Vx: " + String(v_x) + " Vy: " + String(v_y) + " Omega: " + String(omega));
+      speedConvertor(v_x, v_y, omega);
+    }
+  }
+
+  updateOdometry();
+  Serial.print("O ");
+  Serial.print(robotX / 1000.0, 4); Serial.print(" ");
+  Serial.print(robotY / 1000.0, 4); Serial.print(" ");
+  Serial.println(robotTheta, 4);
+
+  wheel1.PIDRegulate();
+  wheel2.PIDRegulate();
+  wheel3.PIDRegulate();
+
+  delay(500); // 50Hz
 }
