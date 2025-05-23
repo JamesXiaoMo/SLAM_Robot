@@ -25,30 +25,6 @@ MotorWheel wheel3(3,2,4,5,&irq3);
 Omni3WD Omni(&wheel1,&wheel2,&wheel3);
 
 
-void updateOdometry() {
-  long p1 = wheel1.getCurrPulse();
-  long p2 = wheel2.getCurrPulse();
-  long p3 = wheel3.getCurrPulse();
-
-  long dp1 = p1 - lastP1;
-  long dp2 = p2 - lastP2;
-  long dp3 = p3 - lastP3;
-
-  lastP1 = p1; lastP2 = p2; lastP3 = p3;
-
-  float distance1 = (dp1 / pulsesPerRevolution) * 2 * PI * wheel_R;
-  float distance2 = (dp2 / pulsesPerRevolution) * 2 * PI * wheel_R;
-  float distance3 = (dp3 / pulsesPerRevolution) * 2 * PI * wheel_R;
-
-  float dx = (-2.0/3.0)*distance1 + (1.0/3.0)*(distance2 + distance3);
-  float dy = (sqrt(3)/3.0)*(distance2 - distance3);
-  float dtheta = (1.0/robot_R)*(distance1 + distance2 + distance3)/3.0;
-
-  robotX += dx;
-  robotY += dy;
-  robotTheta += dtheta;
-}
-
 void speedConvertor(float Vx, float Vy, float Vangle){
   Serial.println("--- Speed Convertor ---");
   Serial.print("Vx     = "); Serial.println(Vx, 4);
@@ -58,13 +34,13 @@ void speedConvertor(float Vx, float Vy, float Vangle){
   float V1 = Vx + robot_R * Vangle;
   float V2 = -Vx/2 + Vy * sin60 + robot_R * Vangle;
   float V3 = -Vx/2 + -Vy * sin60 + robot_R * Vangle;
-  Serial.print("Vx     = "); Serial.println(V1, 4);
-  Serial.print("Vy     = "); Serial.println(V2, 4);
-  Serial.print("Vangle = "); Serial.println(V3, 4);
+  Serial.print("V1     = "); Serial.println(V1, 4);
+  Serial.print("V2     = "); Serial.println(V2, 4);
+  Serial.print("V3     = "); Serial.println(V3, 4);
   Serial.println("------------------------");
-  wheel1.setGearedSpeedRPM((V1 * 60)/(PI * 0.1));
-  wheel2.setGearedSpeedRPM((V2 * 60)/(PI * 0.1));
-  wheel3.setGearedSpeedRPM((V3 * 60)/(PI * 0.1));
+  wheel1.setSpeedMMPS(V1 * 1000);
+  wheel2.setSpeedMMPS(V2 * 1000);
+  wheel3.setSpeedMMPS(V3 * 1000);
 }
 
 void setup() {
@@ -74,35 +50,7 @@ void setup() {
   wheel1.PIDEnable(0.26,0.02,0,10);
   wheel2.PIDEnable(0.26,0.02,0,10);
   wheel3.PIDEnable(0.26,0.02,0,10);
-  //speedConvertor(0,0,-1);
 }
-
-// void loop() {
-//   updateOdometry();
-//   wheel1.PIDRegulate();
-//   wheel2.PIDRegulate();
-//   wheel3.PIDRegulate();
-  // Serial.print("Wheel1 Speed: ");
-  // Serial.print(wheel1.getSpeedMMPS());
-  // Serial.print("  Wheel2 Speed: ");
-  // Serial.print(wheel2.getSpeedMMPS());
-  // Serial.print("  Wheel3 Speed: ");
-  // Serial.println(wheel3.getSpeedMMPS());
-  // Serial.print("Dx: ");
-  // Serial.print(robotX);
-  // Serial.print("  Dy: ");
-  // Serial.print(robotY);
-  // Serial.print("  Dw: ");
-  // Serial.println(robotTheta);
-  // if (Serial.available()) {
-  //   char command = Serial.read();
-  //   if (command == 's') {
-  //     speedConvertor(0, 0, 0);
-  //   }else if (command == 'w') {
-  //     speedConvertor(0, 0, 1);
-  //   }
-  // }
-// }
 
 void loop() {
   if (Serial.available()) {
@@ -116,22 +64,12 @@ void loop() {
       float v_x = cmd.substring(firstSpace + 1, secondSpace).toFloat();
       float v_y = cmd.substring(secondSpace + 1, thirdSpace).toFloat();
       float omega = cmd.substring(thirdSpace + 1).toFloat();
-
-      Serial.println("Parsed via substring:");
-      Serial.println("Vx: " + String(v_x) + " Vy: " + String(v_y) + " Omega: " + String(omega));
       speedConvertor(v_x, v_y, omega);
     }
   }
-
-  updateOdometry();
-  Serial.print("O ");
-  Serial.print(robotX / 1000.0, 4); Serial.print(" ");
-  Serial.print(robotY / 1000.0, 4); Serial.print(" ");
-  Serial.println(robotTheta, 4);
 
   wheel1.PIDRegulate();
   wheel2.PIDRegulate();
   wheel3.PIDRegulate();
 
-  delay(500); // 50Hz
 }
